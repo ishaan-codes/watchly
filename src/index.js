@@ -30,7 +30,6 @@ this is also a way of connecting database but we can definitrely use the better 
 
 import connectDB from '../db/index.js';
 //sometimes writing only ./db might produce error so we update to ../db/index
-connectDB();
 
 //this is also an approach of connecting database, but we have polluted our index.js file with this
 //better approach is the one above
@@ -55,3 +54,20 @@ connectDB();
 dotenv.config({
     path: "./env"
 });
+
+connectDB();
+/*
+.then(() => {
+    app.listen(process.env.PORT || 8000, () => {
+        console.log(`Server running on port ${process.env.PORT}`);
+    });
+});
+.catch((err) => {
+    console.log("MONGODB connection failed !!", err);
+});
+*/
+
+//we majorly use 2 statements from request module (req.params -- allows to get data from url ; req.body -- data can come in this in form of forms, json etc. thus we need to add some configurations here)
+//sometimes we also use req.cookies -- allows to store cookies from server
+//cors -- allows to configure settings for cross origin resource sharing
+//app.use is mostly used for configuration settings or in case of a middleware
