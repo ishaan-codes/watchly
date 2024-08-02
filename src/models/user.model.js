@@ -59,7 +59,7 @@ const userSchema = new Schema(
 
 userSchema.pre("save", async function (next) {
     if (!this.isModified("password")) return next();
-    this.password = bcrypt.hash(this.password, 10)
+    this.password = await bcrypt.hash(this.password, 10)
     next()
     //in this code, whenever data is saved this will change password everytime 
     //thus we need to write such a code that runs this particular code only when we send modification in password field,i.e., if there is no modification of password we need not run this piece of code
