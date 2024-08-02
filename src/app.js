@@ -23,4 +23,22 @@ app.use(express.static("public"));
 //used to allow static input data such as images, pdfs (name inspired from public folder we made earlier)
 app.use(cookieParser());
 
+//routes import
+import userRouter from './routes/user.routes.js';
+//#debugging -- writing .routes/user.routes.js gives an error
+
+//routes declaration
+
+//normal version -- app.use("/users", userRouter);
+//for ex. url formed in this case would be http://localhost:8000/users/register
+//standard practice version
+app.use("/api/v1/users", userRouter);
+//for ex. url formed in this case would be http://localhost:8000/api/v1/users/register
+//it is a standard practice of defining api and its version
+
+//earlier we used to write app.get for routes because we were writing both routes and controllers through app
+//now things have changed, we have now organised routes and controllers into different folders
+//app.use allows us to handle/activate all routes, and moves user through a set of steps mentioned in user.routes.js
+//this is an application of middlewares
+
 export {app};

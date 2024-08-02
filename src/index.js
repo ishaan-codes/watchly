@@ -17,8 +17,7 @@ import dotenv from "dotenv";
 
 //this method is better way of importing dotenv (this is not yet available on npm, we will use experimental feature of dotenv to move forward)
 
-import express from "express";
-const app = express();
+import {app} from './app.js';
 
 /*
 function connectDB(){}
@@ -55,17 +54,16 @@ dotenv.config({
     path: "./env"
 });
 
-connectDB();
-/*
+connectDB()
 .then(() => {
     app.listen(process.env.PORT || 8000, () => {
         console.log(`Server running on port ${process.env.PORT}`);
     });
-});
+})
 .catch((err) => {
     console.log("MONGODB connection failed !!", err);
-});
-*/
+})
+//#debugging -- using semi-colon ; at end of try-catch block or even on connectDB() gives error
 
 //we majorly use 2 statements from request module (req.params -- allows to get data from url ; req.body -- data can come in this in form of forms, json etc. thus we need to add some configurations here)
 //sometimes we also use req.cookies -- allows to store cookies from server

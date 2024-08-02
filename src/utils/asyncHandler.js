@@ -21,9 +21,10 @@ const asyncHandler = (requestHandler) => async (req,res,next) => {
 //previous way was using try catch blocks, while this is using promises
 //this code is shorter thus more efficient
 const asyncHandler = (requestHandler) => {
-    (req,res,next) => {
+    return (req,res,next) => {
         Promise.resolve(requestHandler(req,res,next)).catch((err) => next(err))
     }
+    //#debugging -- not writing return gave error as this is a higher order function
 }
 export {asyncHandler};
 
