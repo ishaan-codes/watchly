@@ -4,6 +4,30 @@ import { ApiError } from "../utils/ApiErrors.js";
 import { User } from "../models/user.model.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
+import { verifyJWT } from "../middlewares/auth.middleware.js";
+
+//we are going to use access and refresh tokens many times in code thus we'll build a separate entity to do this task fast
+const generateAccessAndRefreshTokens = async(userId) => {
+    try {
+        const user = await User.findyById(userId)
+        const accessToken = user.generateAccessToken()
+        const refreshToken = user.generateRefreshToken()
+
+        user.refreshToken = refreshToken
+        //this saves refresh token in database
+        //refresh tokens are saved in database so that we don't have to generate new access tokens everytime user logs in
+        //user.save()
+        //this saves the user in database and activates all the parameters of user model
+        //but here for ex. we don't have password entity, thus we pass on an object
+        await user.save({ validateBeforeSave: false })
+        //this allows to save the user without any validation/cross-checking
+
+        return {accessToken, refreshToken}
+    }
+    catch (error) {
+        throw new ApiError (500, "Something went wrong while generating Access and Refresh Token")
+    }
+};
 
 const registerUser = asyncHandler(async (req, res) => {
     const {username, email, fullName, password} = req.body;
@@ -21,9 +45,10 @@ const registerUser = asyncHandler(async (req, res) => {
         throw new ApiError(400, "All fields are required")
     }
 
-    const existedUser = User.findOne({
+    const existedUser = await User.findOne({
         $or: [{username}, {email}]
         //checks if either of username or email already exists in our database
+        //debugging -- we missed an await here while talking to database
     });
     
     if (existedUser){
@@ -76,4 +101,94 @@ const registerUser = asyncHandler(async (req, res) => {
     );
 });
 
-export {registerUser}
+const loginUser = asyncHandler(async (req, res) => {
+    const {email, username, password} = req.body
+    //our strategy is to add an object in this request, i.e., req.user 
+
+    if (!(username || email)) {
+        throw new ApiError(400, "Username or Password is required")
+    };
+
+    const user = await User.findOne({
+        $or: [{username}, {email}]
+        //allows us to pass an array as an object
+        //operators in mongoDB are denoted by $ in the beginning
+    });
+    //it returns the first entry/element it finds in mongoDB
+
+    if (!user) {
+        throw new ApiError (400, "User does not exist")
+    };
+
+    const isPasswordValid = await user.isPasswordCorrect(password);
+    //user -- this entity belongs to us and our user (instant mined/extracted from our database) thus, methods that we have built should be accessed using this
+    //User -- this entity is that of mongoose thus, methods available through mongoose should be accessed using this
+
+    if (!isPasswordValid) {
+        throw new ApiError(400, "User Credentials are invalid.")
+    };
+
+    const {accessToken, refreshToken} = await generateAccessAndRefreshTokens(user._id);
+    //refresh token generated from here is actually empty as it is taken from user in line 110
+    //so we need to get actual value of user for which we have two ways -- either we update this entity only to primary 'user' or we call the value from our database
+    //we need to decide which way to move forward on the basis of less expensive operation
+    const loggedInUser = await User.findById(user._id).select("-password -refreshToken");
+    //this whole step is optional and depends on personal requirements
+
+    const options = {
+        httpOnly: true,
+        secure: true
+    };
+    //by default, anyone can modify our cookies in frontend
+    //this code allows to modify cookies using server only
+    
+    return res
+    .status(200)
+    .cookie("accessToken", accessToken, options)
+    .cookie("refreshToken", refreshToken, options)
+    .json(
+        new ApiResponse(
+            200,
+            {
+                user: loggedInUser, accessToken, refreshToken
+                //need of sending these tokens again is because this code handles the case when user wants to save these tokens from its end
+            },
+            "User logged in successfully"
+        )
+    )
+});
+
+const logOutUser = asyncHandler(async (req, res) => {
+    //first step is to clear cookies of user
+    //secondly, its refresh tokens need to be reset
+    //we,ll need a user Id to access user but we don't have any way to get it
+    //thus we need to build our own middleware
+    await User.findByIdAndUpdate(
+        req.user._id,
+        {
+            $set: {
+                refreshToken: undefined //resets refresh token to undefined
+            }
+        },
+        {
+            new: true //allows to return updated value of entity (here refresh token) rather than untouched version of it
+        }
+    )
+
+    const options = {
+        httpOnly: true,
+        secure: true
+    };
+
+    return res
+    .status(200)
+    .clearCookie("accessToken", options)
+    .clearCookie("refreshToken", options)
+    .json(new ApiResponse(200, {}, "User logged out"))
+});
+
+export {
+    registerUser,
+    loginUser,
+    logOutUser
+}

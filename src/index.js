@@ -51,7 +51,8 @@ import connectDB from '../db/index.js';
 */
 //professional developers write ; before async function to avoid any error erupted while importing
 dotenv.config({
-    path: "./env"
+    path: "./.env"
+    //#debugging -- ./env should have given error but somehow it worked fine, but ideally we should write ./.env as the filename is actually .env and simply not env
 });
 
 connectDB()
