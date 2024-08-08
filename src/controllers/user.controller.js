@@ -4,7 +4,7 @@ import { ApiError } from "../utils/ApiErrors.js";
 import { User } from "../models/user.model.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
-import { verifyJWT } from "../middlewares/auth.middleware.js";
+import jwt from "jsonwebtoken";
 
 //we are going to use access and refresh tokens many times in code thus we'll build a separate entity to do this task fast
 const generateAccessAndRefreshTokens = async(userId) => {
@@ -187,8 +187,61 @@ const logOutUser = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, {}, "User logged out"))
 });
 
+const refreshAccessToken = asyncHandler(async (req, res) => {
+    //accessing refresh tokens from cookies
+    const incomingRefresToken = req.cookies.refreshToken || req.body.refreshToken
+    //req.body was used to cater request from user from phone, i.e., the cookies might be sent through body and not from cookies
+    if (incomingRefresToken) {
+        throw new ApiError (401, "Unauthorized Request")
+        //its not always necessary to send an error code/response, in some cases it is important to throw exact error to the user so that it can be fixed
+        //fake/irrelevant responses might become fatal in some cases for ex. a fake response of 200 code is very dangerous as the user is confused when application doesn't run perfectly but gives indication of successful completion
+    }
+
+    try {
+        //verifying token using jwt
+        const decodedToken = jwt.verify(
+            incomingRefresToken,
+            process.env.REFRESH_TOKEN_SECRET
+        )
+    
+        const user = await User.findById(findById?._id)
+    
+        if (!user) {
+            throw new ApiError (401, "Invalid Refresh Token")
+        }
+    
+        //we'll match if incomingRefreshToken that the user is sending and the encoded refreshToken that we got by finding User are same
+        if (incomingRefresToken !== user?.refreshToken) {
+            throw new ApiError (401, "Refresh Token is expired")
+        }
+    
+        //we'll now generate a new refresh token for the user
+        const options = {
+            httpOnly: true,
+            secure: true
+        }
+    
+        const {accessToken, newRefreshToken} = await generateAccessAndRefreshTokens(user._id)
+    
+        return res
+        .status(200)
+        .cookies("accessToken", accessToken, options)
+        .cookies("refreshToken", newRefreshToken, options)
+        .json(
+            new ApiResponse(
+                200,
+                {accessToken, refreshToken: newRefreshToken},
+                "Access Token refreshed successfully"
+            )
+        )
+    } catch (error) {
+        throw new ApiError (401, error?.message || "Invalid Refresh Token")
+    }
+});
+
 export {
     registerUser,
     loginUser,
-    logOutUser
+    logOutUser,
+    refreshAccessToken
 }

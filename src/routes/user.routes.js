@@ -1,5 +1,5 @@
 import {Router} from "express";
-import { loginUser, registerUser } from "../controllers/user.controller.js"; //automatically imported after writing line 6
+import { loginUser, logOutUser, registerUser, refreshAccessToken } from "../controllers/user.controller.js"; //automatically imported after writing line 6
 //#debugging -- writing ../controller/user.controller gave error
 import {upload} from '../middlewares/multer.middleware.js';
 
@@ -29,5 +29,6 @@ router.route("/login").post(loginUser)
 //secured routes
 router.route("/logout").post(verifyJWT, logOutUser)
 //we can add middleware in any order but we need to ensure that there is a next() flag at the end of each middleware
+router.route("refresh-token").post(refreshAccessToken)
 
 export default router;
