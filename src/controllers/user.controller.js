@@ -191,7 +191,7 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
     //accessing refresh tokens from cookies
     const incomingRefresToken = req.cookies.refreshToken || req.body.refreshToken
     //req.body was used to cater request from user from phone, i.e., the cookies might be sent through body and not from cookies
-    if (incomingRefresToken) {
+    if (!incomingRefresToken) {
         throw new ApiError (401, "Unauthorized Request")
         //its not always necessary to send an error code/response, in some cases it is important to throw exact error to the user so that it can be fixed
         //fake/irrelevant responses might become fatal in some cases for ex. a fake response of 200 code is very dangerous as the user is confused when application doesn't run perfectly but gives indication of successful completion
