@@ -350,6 +350,93 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
     )
 });
 
+const getUserChannelProfile = asyncHandler(async (req, res) => {
+    const {username} = req.params
+
+    if (!username?.trim()) {
+        throw new ApiError(400, "Username is missing")
+    }
+
+    const channel = await User.aggregate([
+        {
+            //aggregation match pipeline -- it requires instruction on how to match pi
+            $match: {
+                username: username?.toLowerCase()
+            }
+        },
+        {
+            $lookup: {
+                from: "subscriptions",
+                //here we need to write the mongoose name of the model, i.e., lowercase plural for ex. here we shall write subscriptions instead of Subscription
+                localField: "_id",
+                foreignField: "channel",
+                as: "subscribers"
+            }
+        },
+        //here we found subscribers
+        //next we'll find channels subscribed
+        {
+            $lookup: {
+                from: "subscriptions",
+                //here we need to write the mongoose name of the model, i.e., lowercase plural for ex. here we shall write subscriptions instead of Subscription
+                localField: "_id",
+                foreignField: "subscriber",
+                as: "subscribedTo"
+            } 
+        },
+        //now, we need to add above two fields
+        {
+            //this keeps already existing fields in the model, but adds new fields to it
+            $addFields: {
+                subscribersCount: {
+                    $size: "$subscribers" //we are using a '$' before subscribers as it is now a field
+                },
+                channelsSubscribedToCount: {
+                    $size: "$subscribedTo"
+                },
+                isSubscribed: {
+                    //condition field takes 3 parameters as input: if, then, else
+                    $condition: {
+                        if: {
+                            $in: [req.user?._id, "$subscribers.subscriber"] 
+                            //checks if an entity is present in given array or object
+                            //first argument is the enity which needs to be checked and second argument is the array or object in which entity needs to be checked
+                        },
+                        then: true,
+                        else: false
+                    }
+
+                }
+            }
+        },
+        {
+            //gives the projection that it provides selected values and not all of them at once
+            //we need to give a flag '1' to those values which we want to project
+            //professionally, we shouldn't generally project all the valus as it unnecessarily increases network traffic and size of data
+            $project: {
+                fullName: 1,
+                username: 1,
+                subscribersCount: 1,
+                channelsSubscribedToCount: 1,
+                isSubscribed: 1,
+                avatar: 1,
+                coverImage: 1,
+                email: 1
+            }
+        }
+    ])
+
+    if (!channel?.length) {
+        throw new ApiError(404, "Channel does not exists")
+    }
+
+    return res
+    .status(200)
+    .json(
+        new ApiResponse(200, channel[0], "User channel fetched successfully")
+    )
+});
+
 export {
     registerUser,
     loginUser,

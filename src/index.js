@@ -22,7 +22,7 @@ import {app} from './app.js';
 /*
 function connectDB(){}
 connectDB();
-this is also a way of connecting database but we can definitrely use the better way of connecting database by using iffie function
+this is also a way of connecting database but we can definitely use the better way of connecting database by using iffie function
 */
 
 //this approach involves writing function in another folder and file, and then just importing it here and execute it
