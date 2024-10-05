@@ -437,6 +437,69 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
     )
 });
 
+const getWatchHistory = asyncHandler(async (req, res) => { 
+    //req.user._id -- we actually get a string from this entity but if we really want a user id, we need Object('string')
+    //for getting this Object entity we need to convert
+    const User = await User.aggregate([
+        {
+            $match: {
+                //_id:  req.user._id 
+                // this is not valid as mongoose formatting doesn't work here, only aggregation pipeline code is valid
+                //we need to build a mongoose object id
+                _id: new mongoose.Types.ObjectId(req.user._id)
+            },
+            $lookup: {
+                from: "videos",
+                localField: "watchHistory",
+                foreignField: "_id",
+                as: "watchHistory",
+                pipeline: [
+                    {
+                        $lookup: {
+                            from: "users",
+                            localField: "owner",
+                            foreignField: "_id",
+                            as: "owner",
+                            pipeline: [
+                                {
+                                    $project: {
+                                        fullName: 1,
+                                        username: 1,
+                                        avatar: 1
+                                    }
+                                }
+                                //we don't have a lot of entities in owner field as we have used a sub-pipeline
+                            ]                       
+                        }                    
+                    },
+                    //we actually get an array of these fields and thus we need to extract first index element from that array
+                    //for the frontend team, this maybe hectic as a further looping etc. approaches are required to extract required data
+                    //thus we build another sub-pipeline
+                    {
+                        $addFields: {
+                            owner: {
+                                $first: "$owner"
+                                //we need to extract first element from owner field thus $ was prefixed
+                                //we are updating the owner entity itself with the required value                                
+                            }
+                        }
+                    }
+                ]
+            }
+        }
+    ])
+
+    return res
+    .status (200)
+    .json(
+        new ApiResponse(
+            200,
+            user[0].watchHistory,
+            "Watch history fetched successfully"
+        )
+    )
+})
+
 export {
     registerUser,
     loginUser,
@@ -446,5 +509,7 @@ export {
     getCurrentUser,
     updateAccountDetails,
     updateUserAvatar,
-    updateUserCoverImage
+    updateUserCoverImage,
+    getUserChannelProfile,
+    getWatchHistory
 }
