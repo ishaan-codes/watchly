@@ -28,7 +28,7 @@ const userSchema = new Schema(
             trim: true, //used to remove useless whitespaces in a string
             index: true //used to make data field appear in searching of a database
         },
-        email: {
+            email: {
             type: String,
             required: true,
             unique: true,
